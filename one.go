@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func One() {
+func OnePartOne() {
 	file, err := os.Open("./input-1.txt")
 	if err != nil {
 		log.Fatal(err)

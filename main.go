@@ -4,6 +4,7 @@ import "fmt"
 
 func main() {
 	fmt.Println("Hello, World!")
-	//One();
+	//OnePartOne()
+	//OnePartTwo()
 	Two()
 }
