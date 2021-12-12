@@ -10,7 +10,7 @@ import (
 )
 
 func Five() {
-	file, err := os.Open("./input-5-example.txt")
+	file, err := os.Open("./input-5.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -35,24 +35,53 @@ func Five() {
 	diagram := make([]int, maxX*maxY)
 
 	for _, pair := range pairs {
-		startX := min(pair[0], pair[2])
-		endX := max(pair[0], pair[2])
-		startY := min(pair[1], pair[3])
-		endY := max(pair[1], pair[3])
 
 		if isStraigtLine(pair) {
+			startX := min(pair[0], pair[2])
+			endX := max(pair[0], pair[2])
+			startY := min(pair[1], pair[3])
+			endY := max(pair[1], pair[3])
 			for x := startX; x <= endX; x++ {
 				for y := startY; y <= endY; y++ {
 					index := x + y*maxX
 					diagram[index] = diagram[index] + 1
 				}
 			}
+		} else {
+			// fmt.Println(pair)
+			xInc := pair[2] - pair[0]
+			yInc := pair[3] - pair[1]
+			currX := pair[0]
+			currY := pair[1]
+			// fmt.Printf("x inc %d y inc %d curX %d currY %d\n", xInc, yInc, currX, currY)
+			for i := 0; i <= abs(xInc); i++ {
+				// fmt.Printf("plotting at %d %d\n", currX, currY)
+				index := currX + currY*maxX
+				diagram[index] = diagram[index] + 1
+				currX += sign(xInc)
+				currY += sign(yInc)
+			}
+
 		}
 	}
 
+	// plotDiagram(diagram, maxX)
 	overlaps := countOverlaps(diagram)
 	fmt.Printf("overlaps %d \n", overlaps)
 
+}
+
+func abs(number int) int {
+	if number < 0 {
+		return -number
+	}
+	return number
+}
+func sign(number int) int {
+	if number < 0 {
+		return -1
+	}
+	return 1
 }
 
 func isStraigtLine(pair []int) bool {
