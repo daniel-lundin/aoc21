@@ -39,7 +39,7 @@ func Four() {
 		hits := make([]int, 25)
 		for numbersDrawn, number := range bingoNumbers {
 			board := boards[i*25 : i*25+25]
-			numberIndex := findIndex(board, number)
+			numberIndex := findBoardIndex(board, number)
 
 			if numberIndex != -1 {
 				hits[numberIndex] = 1
@@ -137,7 +137,7 @@ func isBingo(hits []int) bool {
 	return false
 }
 
-func findIndex(numbers []int, number int) int {
+func findBoardIndex(numbers []int, number int) int {
 	for i := 0; i < len(numbers); i++ {
 		if numbers[i] == number {
 			return i
