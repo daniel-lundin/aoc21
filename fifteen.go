@@ -21,23 +21,42 @@ func Fifteen() {
 	riskMap := make([][]int, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
-		riskMap = append(riskMap, StringListToNumbers(strings.Split(line, "")))
+		row := StringListToNumbers(strings.Split(line, ""))
+		expandedRow := make([]int, 5*len(row))
+		for i := 0; i < 5; i++ {
+			for rowIndex, value := range row {
+				expandedRow[i*len(row)+rowIndex] = (value+i-1)%9 + 1
+			}
+
+		}
+		riskMap = append(riskMap, expandedRow)
 	}
 
-	shortestPath := 830
-	lowestCosts := make([][]int, len(riskMap))
-	for rowIndex, row := range riskMap {
+	expandedRiskMap := make([][]int, 0)
+	for i := 0; i < 5; i++ {
+		for _, row := range riskMap {
+			updatedRow := make([]int, len(row))
+			for index, value := range row {
+				updatedRow[index] = (value+i-1)%9 + 1
+			}
+			expandedRiskMap = append(expandedRiskMap, updatedRow)
+		}
+	}
+
+	shortestPath := math.MaxInt
+	lowestCosts := make([][]int, len(expandedRiskMap))
+	for rowIndex, row := range expandedRiskMap {
 		lowestCosts[rowIndex] = make([]int, len(row))
 		for colIndex := range row {
 			lowestCosts[rowIndex][colIndex] = math.MaxInt
 		}
 	}
-	walkCave(riskMap, 0, 0, -riskMap[0][0], &lowestCosts, &shortestPath)
+	walkCave(expandedRiskMap, 0, 0, -expandedRiskMap[0][0], &lowestCosts, &shortestPath)
 	fmt.Println(shortestPath)
 }
 
 func walkCave(riskMap [][]int, x int, y int, currentCost int, lowestCosts *[][]int, shortestPath *int) {
-	if x > len(riskMap)-1 || y > len(riskMap[0])-1 {
+	if x > len(riskMap)-1 || y > len(riskMap[0])-1 || x < 0 || y < 0 {
 		return
 	}
 	if x == len(riskMap)-1 && y == len(riskMap)-1 {
@@ -55,21 +74,11 @@ func walkCave(riskMap [][]int, x int, y int, currentCost int, lowestCosts *[][]i
 		return
 	}
 	if currentCost >= *shortestPath {
-		// fmt.Printf(".")
 		return
 	}
 
-	if x+1 < len(riskMap)-1 && y < len(riskMap[0])-1 {
-		if riskMap[x][y+1] < riskMap[x+1][y] {
-
-			walkCave(riskMap, x, y+1, currentCost, lowestCosts, shortestPath)
-			walkCave(riskMap, x+1, y, currentCost, lowestCosts, shortestPath)
-		} else {
-			walkCave(riskMap, x+1, y, currentCost, lowestCosts, shortestPath)
-			walkCave(riskMap, x, y+1, currentCost, lowestCosts, shortestPath)
-		}
-	} else {
-		walkCave(riskMap, x, y+1, currentCost, lowestCosts, shortestPath)
-		walkCave(riskMap, x+1, y, currentCost, lowestCosts, shortestPath)
-	}
+	walkCave(riskMap, x, y+1, currentCost, lowestCosts, shortestPath)
+	walkCave(riskMap, x+1, y, currentCost, lowestCosts, shortestPath)
+	walkCave(riskMap, x-1, y, currentCost, lowestCosts, shortestPath)
+	walkCave(riskMap, x, y-1, currentCost, lowestCosts, shortestPath)
 }
