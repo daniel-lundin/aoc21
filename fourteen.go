@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+type Pair struct {
+	a byte
+	b byte
+}
+
 func Fourteen() {
 	file, err := os.Open("./input-14.txt")
 	if err != nil {
@@ -22,25 +27,32 @@ func Fourteen() {
 	polymer := scanner.Text()
 	scanner.Scan()
 
-	insertionRules := make(map[string]byte, 0)
+	insertionRules := make(map[Pair]byte, 0)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, " -> ")
-		insertionRules[parts[0]] = parts[1][0]
+		insertionRules[Pair{parts[0][0], parts[0][1]}] = parts[1][0]
 	}
 
 	counts := make(map[byte]int, 0)
 	for i := 0; i < len(polymer); i++ {
 		counts[polymer[i]]++
 	}
-	pairs := make([]string, 0)
+	pairs := make([]Pair, 0)
 	for i := 0; i < len(polymer)-1; i++ {
-		pairs = append(pairs, polymer[i:i+2])
+		pairs = append(pairs, Pair{polymer[i], polymer[i+1]})
+	}
+
+	localCounts := make(map[Pair]map[byte]int, 0)
+	emptyCounts := make(map[Pair]map[byte]int, 0)
+	for key, _ := range insertionRules {
+		localCounts[key] = make(map[byte]int, 0)
+		pairInsertion(key, insertionRules, localCounts[key], emptyCounts, 0, 20)
 	}
 
 	for _, pair := range pairs {
-		pairInsertion(pair, insertionRules, counts, 0, 10)
+		pairInsertion(pair, insertionRules, counts, localCounts, 0, 20)
 	}
 
 	leastCommon := math.MaxInt
@@ -62,12 +74,15 @@ func sumPolymer(counts map[byte]int) int {
 	return count
 }
 
-func pairInsertion(pair string, insertionRules map[string]byte, counts map[byte]int, step int, steps int) {
+func pairInsertion(pair Pair, insertionRules map[Pair]byte, counts map[byte]int, localCounts map[Pair]map[byte]int, step int, steps int) {
 	if step >= steps {
+		for key, count := range localCounts[pair] {
+			counts[key] += count
+		}
 		return
 	}
 	insertion := insertionRules[pair]
 	counts[insertion]++
-	pairInsertion(fmt.Sprintf("%c%c", pair[0], insertion), insertionRules, counts, step+1, steps)
-	pairInsertion(fmt.Sprintf("%c%c", insertion, pair[1]), insertionRules, counts, step+1, steps)
+	pairInsertion(Pair{pair.a, insertion}, insertionRules, counts, localCounts, step+1, steps)
+	pairInsertion(Pair{insertion, pair.b}, insertionRules, counts, localCounts, step+1, steps)
 }
