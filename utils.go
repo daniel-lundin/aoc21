@@ -23,3 +23,13 @@ func StringListToNumbers(args []string) []int {
 	}
 	return numbers
 }
+
+func bitsToDecimal(bits []int) int {
+	sum := 0
+	pow := 2 << (len(bits) - 2)
+	for _, bit := range bits {
+		sum += bit * pow
+		pow = pow >> 1
+	}
+	return sum
+}
