@@ -33,3 +33,12 @@ func bitsToDecimal(bits []int) int {
 	}
 	return sum
 }
+
+func parseInt(str string) int {
+	number, err := strconv.Atoi(str)
+	if err != nil {
+		fmt.Printf("Failed to parse %s into int\n", str)
+		os.Exit(1)
+	}
+	return number
+}
