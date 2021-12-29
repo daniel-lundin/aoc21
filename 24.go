@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -14,6 +15,11 @@ type Instruction struct {
 	op string
 	a  string
 	b  string
+}
+
+type InputPair struct {
+	z     int
+	input int
 }
 
 func TwentyFour() {
@@ -26,53 +32,85 @@ func TwentyFour() {
 	scanner := bufio.NewScanner(file)
 
 	instructions := make([]Instruction, 0)
+	subPrograms := make([][]Instruction, 0)
+	subProgram := make([]Instruction, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
-		instruction := parseInstruction(line)
-		instructions = append(instructions, instruction)
-	}
-
-	// registers := make(map[string]int)
-
-	permutations := make([][]int, 0, 14*9)
-	faultyNumbers := make(map[Coord2D]bool)
-	makePermutations([]int{}, &permutations, 14, faultyNumbers, func(number []int) {
-
-		// time.Sleep(1 * time.Second)
-		startNumber := number
-		registers, err := runProgram(instructions, &number)
-		if err != nil {
-			lastIndex := len(startNumber) - len(number) - 1
-			faultyNumber := startNumber[lastIndex]
-			fmt.Printf("start len %d, current len %d. Number %d\n", len(startNumber), len(number), faultyNumber)
-			fmt.Printf("Divide by zero at %d \n", lastIndex)
-
-			faultyNumbers[Coord2D{lastIndex, faultyNumber}] = true
-			return
-		}
-		if registers["z"] == 0 {
-			fmt.Printf("found valid number %v\n", startNumber)
-		}
-	})
-}
-
-func makePermutations(combination []int, output *[][]int, length int, faultyNumbers map[Coord2D]bool, callback func(number []int)) {
-	for j := 1; j <= 9; j++ {
-		skipNumber := false
-		for faulty := range faultyNumbers {
-			if len(combination) > faulty.x && combination[faulty.x] == faulty.y {
-				skipNumber = true
-			}
-		}
-		if skipNumber {
-			// fmt.Printf("bailing out for %v\n", combination)
+		if strings.HasPrefix(line, "#") {
 			continue
 		}
+		instruction := parseInstruction(line)
+		if instruction.op == "inp" {
+			if len(subProgram) > 0 {
+				subPrograms = append([][]Instruction{subProgram}, subPrograms...)
+			}
+			subProgram = make([]Instruction, 0)
+		}
+		instructions = append(instructions, instruction)
+		subProgram = append(subProgram, instruction)
+	}
+	subPrograms = append([][]Instruction{subProgram}, subPrograms...)
+
+	ioMaps := make([]map[int][]InputPair, 0)
+	for _, program := range subPrograms[0 : len(subPrograms)-1] {
+		ioMap := make(map[int][]InputPair)
+		for z := -100000; z < 100000; z++ {
+			for i := 1; i < 10; i++ {
+				registers := map[string]int{
+					"z": z,
+				}
+				input := []int{i}
+				registers, _ = runProgram(program, registers, &input)
+				ioMap[registers["z"]] = append(ioMap[registers["z"]], InputPair{z, i})
+
+			}
+		}
+		ioMaps = append(ioMaps, ioMap)
+	}
+	ioMap := make(map[int][]InputPair)
+	for i := 1; i < 10; i++ {
+		registers := map[string]int{}
+		input := []int{i}
+		registers, _ = runProgram(subPrograms[len(subPrograms)-1], registers, &input)
+		ioMap[registers["z"]] = append(ioMap[registers["z"]], InputPair{0, i})
+
+	}
+	ioMaps = append(ioMaps, ioMap)
+
+	completedSequences := make([]int, 0)
+	findInputs(ioMaps, 0, 0, &completedSequences, 0)
+
+	smallestNumber := math.MaxInt
+	for _, number := range completedSequences {
+		smallestNumber = minInt(number, smallestNumber)
+	}
+	fmt.Println(smallestNumber)
+}
+
+func findInputs(ioMaps []map[int][]InputPair, currentNumber int, validOutput int, completedNumbers *[]int, depth int) {
+	if len(ioMaps) == 0 {
+		*completedNumbers = append(*completedNumbers, currentNumber)
+		return
+	}
+	ioMap := ioMaps[0]
+	usedNumbers := make(map[int]bool)
+	for _, inputPair := range ioMap[validOutput] {
+		if len(ioMaps) == 2 {
+			if usedNumbers[inputPair.input] {
+				continue
+			}
+			usedNumbers[inputPair.input] = true
+		}
+		number := currentNumber + inputPair.input*int(math.Pow10(depth))
+		findInputs(ioMaps[1:], number, inputPair.z, completedNumbers, depth+1)
+	}
+}
+func makePermutations(combination []int, length int, callback func(number []int)) {
+	for j := 9; j >= 1; j-- {
 		if len(combination) == length-1 {
-			// *output = append(*output, append(combination, j))
 			callback(append(combination, j))
 		} else {
-			makePermutations(append(combination, j), output, length, faultyNumbers, callback)
+			makePermutations(append(combination, j), length, callback)
 		}
 	}
 }
@@ -86,6 +124,9 @@ func makePermutations(combination []int, output *[][]int, length int, faultyNumb
 
 func runInstruction(ins Instruction, input *[]int, registers map[string]int) error {
 	if ins.op == "inp" {
+		if len(*input) == 0 {
+			return errors.New("Missing input")
+		}
 		registers[ins.a] = (*input)[0]
 		*input = (*input)[1:]
 	}
@@ -104,7 +145,7 @@ func runInstruction(ins Instruction, input *[]int, registers map[string]int) err
 	}
 	if ins.op == "mod" {
 		b := bOperand(ins, registers)
-		if b == 0 || registers[ins.a] == 0 {
+		if b <= 0 || registers[ins.a] < 0 {
 			return errors.New("Mod by zero")
 		}
 		registers[ins.a] = registers[ins.a] % b
@@ -128,6 +169,17 @@ func bOperand(ins Instruction, registers map[string]int) int {
 	}
 }
 
+func runProgram(instructions []Instruction, registers map[string]int, input *[]int) (map[string]int, error) {
+	for _, ins := range instructions {
+		err := runInstruction(ins, input, registers)
+
+		if err != nil {
+			return registers, err
+		}
+	}
+	return registers, nil
+}
+
 func parseInstruction(line string) Instruction {
 	parts := strings.Split(line, " ")
 	if len(parts) == 3 {
@@ -145,14 +197,17 @@ func parseInstruction(line string) Instruction {
 	}
 }
 
-func runProgram(instructions []Instruction, input *[]int) (map[string]int, error) {
-	registers := make(map[string]int)
-	for _, ins := range instructions {
-		err := runInstruction(ins, input, registers)
+func programPart(z, input int) int {
 
-		if err != nil {
-			return registers, err
-		}
+	x := (z % 26) + 14
+	if x == input {
+		x = 0
+	} else {
+		x = 1
 	}
-	return registers, nil
+	y := 25*x + 1 // 26 or 1
+	z = z * y
+
+	z += (input + 12) * x
+	return z
 }
