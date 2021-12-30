@@ -25,5 +25,6 @@ func main() {
 	// TwentyOne()
 	// TwentyTwo()
 	// TwentyThree()
-	TwentyFour()
+	// TwentyFour()
+	TwentyFive()
 }
