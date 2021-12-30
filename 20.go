@@ -9,11 +9,6 @@ import (
 	"strings"
 )
 
-type Coord2D struct {
-	x int
-	y int
-}
-
 func Twenty() {
 	file, err := os.Open("./input-20.txt")
 	if err != nil {

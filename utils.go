@@ -6,6 +6,11 @@ import (
 	"strconv"
 )
 
+type Coord2D struct {
+	x int
+	y int
+}
+
 func StringListToNumbers(args []string) []int {
 	numbers := make([]int, 0)
 	for i := 0; i < len(args); i++ {
